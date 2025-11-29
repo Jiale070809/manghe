@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}个人资料{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body text-center">
+                <img src="{{ user.profile_image.url }}" width="150" height="150" class="rounded-circle mb-3">
+                <h3>{{ user.username }}</h3>
+                <p>注册时间: {{ user.date_joined|date:"Y-m-d" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">编辑资料</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field.errors }}
+                            {% if field.name == 'profile_image' %}
+                                {{ field|add_class:"form-control-file" }}
+                            {% else %}
+                                {{ field|add_class:"form-control" }}
+                            {% endif %}
+                        </div>
+                    {% endfor%}
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">最佳匹配 (Top 5)</h4>
+            </div>
+            <div class="card-body">
+                {% if matches %}
+                    <div class="list-group">
+                        {% for match in matches %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <img src="{{ match.user2.profile_image.url }}" width="40" height="40" class="rounded-circle d-inline-block me-2">
+                                    <span>{{ match.user2.username }}</span>
+                                </div>
+                                <div>
+                                    <span class="badge bg-success">{{ match.match_score }}%</span>
+                                    <a href="{% url 'create_room' match.user2.id %}" class="btn btn-sm btn-primary ms-2">聊天</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">暂无匹配记录，快去开盲盒吧！</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -13,7 +13,7 @@ def logins(request):
         try:
             user=Registeruser.objects.get(reg_name=username)
             if password == user.reg_pwd:
-                return redirect('/result/')
+                return redirect('/base/')
             else:
                 error_msg3="密码错误"
                 return render(request, 'login.html', {'error_msg3':error_msg3})
@@ -47,5 +47,5 @@ def register(request):
         return render(request,'register.html')
 
 
-def result(request):
-    return render(request,'result.html')
+def base(request):
+    return render(request,'base.html')
