@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}开盲盒结果{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">盲盒已开启</h4>
+            </div>
+            <div class="card-body p-5">
+                <h2 class="mb-4">恭喜！您打开了「{{ blindbox.title }}」</h2>
+                
+                {% if matched_user %}
+                    <div class="alert alert-success mb-4">
+                        <h3>匹配到最佳用户</h3>
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <img src="{{ matched_user.profile_image.url }}" width="100" height="100" class="rounded-circle me-3">
+                            <div class="text-left">
+                                <h4>{{ matched_user.username }}</h4>
+                                <p>匹配度: <span class="badge bg-success fs-6">{{ match_score }}%</span></p>
+                                <p>性别: {{ matched_user.get_gender_display|default:'未设置' }}</p>
+                                <p>兴趣: {{ matched_user.interests|default:'未设置' }}</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'create_room' matched_user.id %}" class="btn btn-primary">立即聊天</a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <h4>暂时没有匹配到用户</h4>
+                        <p>请等待其他用户打开这个盲盒，或尝试其他盲盒</p>
+                    </div>
+                {% endif %}
+                
+                <a href="{% url 'blindbox_list' %}" class="btn btn-secondary">返回盲盒列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
