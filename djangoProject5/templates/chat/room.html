@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}聊天 - {{ other_user.username }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex align-items-center">
+                <img src="{{ other_user.profile_image.url }}" width="40" height="40" class="rounded-circle me-3">
+                <h5 class="mb-0">与 {{ other_user.username }} 聊天</h5>
+            </div>
+            <div class="card-body" id="chat-messages" style="height: 500px; overflow-y: auto; padding: 20px;">
+                {% for msg in chat_messages %}
+                    <div class="mb-3 {% if msg.sender == user %}text-end{% endif %}">
+                        <div class="d-inline-block {% if msg.sender == user %}bg-primary text-white{% else %}bg-light text-dark{% endif %} p-3 rounded-3 max-w-75">
+                            <small class="d-block mb-1 {% if msg.sender != user %}text-muted{% endif %}">
+                                {{ msg.sender.username }} · {{ msg.sent_at|date:"H:i" }}
+                            </small>
+                            {{ msg.content }}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted mt-5">
+                        还没有聊天记录，开始发送第一条消息吧~
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="card-footer">
+                <form id="message-form" class="d-flex">
+                    {% csrf_token %}
+                    <input type="text" name="content" class="form-control me-2" placeholder="输入消息..." autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary">发送</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // 自动滚动到底部
+    const scrollToBottom = () => {
+        const messagesDiv = document.getElementById('chat-messages');
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    scrollToBottom();
+
+    // 发送消息
+    document.getElementById('message-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const content = form.querySelector('input[name="content"]').value.trim();
+        
+        if (!content) return;
+
+        const response = await fetch("{% url 'send_message' room.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `content=${encodeURIComponent(content)}`
+        });
+
+        const data = await response.json();
+        if (data.status === 'success') {
+            const messagesDiv = document.getElementById('chat-messages');
+            const isCurrentUser = data.sender === "{{ user.username }}";
+            messagesDiv.innerHTML += `
+              <div class="mb-3 ${isCurrentUser ? 'text-end' : ''}">  <!-- 与模板一致的布局类 -->
+                <div class="d-inline-block ${isCurrentUser ? 'bg-primary text-white' : 'bg-light text-dark'} p-3 rounded-3 max-w-75">
+                    <small class="d-block mb-1 ${!isCurrentUser ? 'text-muted' : ''}">
+                        ${data.sender} · ${data.time}
+                    </small>
+                    ${data.content}
+                </div>
+               </div>
+
+            `;
+            form.querySelector('input').value = '';
+            scrollToBottom();
+        }
+    });
+
+    // 定时刷新消息
+    setInterval(async () => {
+        const lastMsgTime = document.querySelector('#chat-messages > div:last-child small')?.textContent.split('·')[1]?.trim();
+        const response = await fetch("{% url 'chat_room' room.id %}");
+        const html = await response.text();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const newMessages = tempDiv.querySelectorAll('#chat-messages > div');
+        
+        if (lastMsgTime) {
+            let hasNew = false;
+            newMessages.forEach(msg => {
+                const time = msg.querySelector('small')?.textContent.split('·')[1]?.trim();
+                if (time && time !== lastMsgTime) hasNew = true;
+            });
+            if (hasNew) location.reload();
+        }
+    }, 5000);
+    window.onload = function() {
+        const roomId = "{{ room.id }}";
+        fetch(`/chat/mark_read/${roomId}/`);
+    }
+</script>
+{% endblock %}

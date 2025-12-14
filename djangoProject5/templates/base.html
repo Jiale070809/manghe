@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}盲盒项目{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .navbar { margin-bottom: 20px; }
+        .content { min-height: 600px; }
+        .footer { text-align: center; padding: 20px; margin-top: 30px; border-top: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'blindbox_list' %}">盲盒项目</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'profile' %}">
+                                <img src="{{ user.profile_image.url }}" width="24" height="24" class="rounded-circle me-1">
+                                {{ user.username }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'create_blindbox' %}">创建盲盒</a>
+                        </li>
+                       <li class="nav-item">
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link btn btn-link">退出</button>
+                            </form>
+                       </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">登录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register' %}">注册</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container content">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="footer">
+        <p>© 2023 盲盒项目 - 10周开发作业</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block script %}
+        <script>
+    // 每3秒检查一次未读消息
+    setInterval(async () => {
+        if (!{% if user.is_authenticated %}true{% else %}false{% endif %}) {
+            return; // 未登录用户不检查
+        }
+        
+        try {
+            const response = await fetch("/chat/unread_count/");
+            const data = await response.json();
+            
+            if (data.has_unread) {
+                // 显示提醒（可替换为更醒目的样式，如红色徽章）
+                showUnreadAlert(data.unread_rooms);
+            }
+        } catch (error) {
+            console.log("检查未读消息失败：", error);
+        }
+    }, 10000);
+
+    // 显示未读消息提醒
+    function showUnreadAlert(unreadRooms) {
+        // 检查是否已有提醒元素，避免重复创建
+        let alertDiv = document.getElementById('unread-alert');
+        if (!alertDiv) {
+            alertDiv = document.createElement('div');
+            alertDiv.id = 'unread-alert';
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.bottom = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.padding = '15px';
+            alertDiv.style.backgroundColor = '#ff4d4f'; // 红色背景（醒目）
+            alertDiv.style.color = 'white';
+            alertDiv.style.borderRadius = '8px';
+            alertDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            alertDiv.style.zIndex = '9999'; // 确保在最上层
+            document.body.appendChild(alertDiv);
+        }
+
+        // 拼接提醒内容
+        let content = '<p>你有新的消息：</p><ul style="margin:0;padding-left:20px;">';
+        unreadRooms.forEach(room => {
+            content += `<li>来自 ${room.other_user}（${room.count} 条）</li>`;
+        });
+        content += '</ul>';
+        content += '<button style="margin-top:10px;padding:5px 10px;background:white;color:#ff4d4f;border:none;border-radius:4px;cursor:pointer;" onclick="enterChatRoom(';${unreadRooms[0].room_id}')">查看消息</button>';
+        alertDiv.innerHTML = content;
+    }
+
+    // 进入聊天房间并标记消息为已读
+    function enterChatRoom(roomId) {
+        // 跳转到聊天页面
+        window.location.href = `/chat/room/${roomId}/`;
+        // 标记消息为已读（可选：在跳转前发送请求）
+        fetch(`/chat/mark_read/${roomId}/`);
+    }
+</script>
+    {% endblock %}
+</body>
+</html>
